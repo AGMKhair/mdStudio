@@ -1,0 +1,5 @@
+package com.mdstudio
+
+import io.flutter.embedding.android.FlutterFragmentActivity
+
+class MainActivity : FlutterFragmentActivity()

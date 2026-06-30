@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "691030746412",
+    "firebase_url": "https://bitmproject-259c4.firebaseio.com",
+    "project_id": "bitmproject-259c4",
+    "storage_bucket": "bitmproject-259c4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:691030746412:android:09d2ee21ae3d45ac49b889",
+        "android_client_info": {
+          "package_name": "com.agmkhair.spontit.accounting"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "691030746412-4eq01fvdlmtsdis9dd05ievvfqpea3tk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.agmkhair.spontit.accounting",
+            "certificate_hash": "c88e2944b96c81a1e6f652069e4398636d05da64"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClvB8rWSNfS0OTZvupeROoSU5SwzS4jWw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:691030746412:android:680e15a3c6567e9749b889",
+        "android_client_info": {
+          "package_name": "com.mdstudio"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "691030746412-u6578j9629ardjoanh60fpnbjobuh8ib.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mdstudio",
+            "certificate_hash": "c88e2944b96c81a1e6f652069e4398636d05da64"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClvB8rWSNfS0OTZvupeROoSU5SwzS4jWw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
