@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'features/markdown/presentation/pages/dashboard_page.dart';
 import 'features/markdown/presentation/providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Initialize SharedPreferences synchronously before the app starts to prevent theme flicker
+  final sharedPrefs = await SharedPreferences.getInstance();
 
   // Initialize Firebase
   try {
@@ -40,8 +44,12 @@ void main() async {
   // On Android and iOS, the default sqflite databaseFactory is used automatically.
 
   runApp(
-    const ProviderScope(
-      child: MyApp(),
+    ProviderScope(
+      overrides: [
+        // 2. Inject the pre-initialized instance into the provider
+        sharedPreferencesProvider.overrideWithValue(sharedPrefs),
+      ],
+      child: const MyApp(),
     ),
   );
 }
@@ -57,7 +65,7 @@ class MyApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'mdStudio Secure',
+      title: 'mdStudio',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

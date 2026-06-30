@@ -16,3 +16,12 @@
 
 # In-App Purchase ProGuard Rules
 -keep class com.android.billingclient.** { *; }
+
+# Play Core ProGuard Rules to fix R8 missing classes error
+-dontwarn com.google.android.play.core.**
+-keep class com.google.android.play.core.** { *; }
+
+# Firebase Auth / Google Sign-In Rules
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.auth.api.signin.** { *; }
+-dontwarn com.google.firebase.**

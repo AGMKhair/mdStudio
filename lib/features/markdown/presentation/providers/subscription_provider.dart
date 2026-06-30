@@ -66,16 +66,41 @@ class SubscriptionNotifier extends StateNotifier<UserSubscriptionState> {
 
   Future<void> _initialize() async {
     // 1. Listen to Auth changes
-    _authSubscription = _auth.authStateChanges().listen((user) {
+    _authSubscription = _auth.authStateChanges().listen((user) async {
       state = state.copyWith(user: user);
       if (user != null) {
+        // If user is logged in, load/sync subscription
+        await _loadLocalSubscription();
         _syncFromFirebase(user.uid);
+      } else {
+        // If logged out, reset subscription state immediately
+        state = state.copyWith(
+          isSubscribed: false,
+          planType: 'none',
+          expiryDate: null,
+        );
       }
     });
 
+    // 2. Load persisted subscription state only if a user is currently logged in
+    if (_auth.currentUser != null) {
+      await _loadLocalSubscription();
+    }
+
+    // 3. Setup real billing streams
+    final Stream<List<PurchaseDetails>> purchaseUpdated = _iap.purchaseStream;
+    _iapSubscription = purchaseUpdated.listen(
+      _handlePurchaseUpdates,
+      onError: (error) {
+        debugPrint('Purchase stream error: $error');
+      },
+    );
+  }
+
+  Future<void> _loadLocalSubscription() async {
     final db = await DatabaseHelper.instance.database;
 
-    // 2. Load persisted subscription state from DB (most recent active)
+    // Load persisted subscription state from DB (most recent active)
     final List<Map<String, dynamic>> maps = await db.query(
       'subscriptions',
       where: 'is_active = 1',
@@ -83,18 +108,18 @@ class SubscriptionNotifier extends StateNotifier<UserSubscriptionState> {
       limit: 1,
     );
 
-    bool isSubscribed = false;
-    String planType = 'none';
-    DateTime? expiryDate;
-
     if (maps.isNotEmpty) {
       final sub = maps.first;
-      planType = sub['plan_type'];
-      expiryDate = DateTime.parse(sub['expiry_date']);
+      final planType = sub['plan_type'];
+      final expiryDate = DateTime.parse(sub['expiry_date']);
       
       // Check if expired
       if (expiryDate.isAfter(DateTime.now())) {
-        isSubscribed = true;
+        state = state.copyWith(
+          isSubscribed: true,
+          planType: planType,
+          expiryDate: expiryDate,
+        );
       } else {
         // Mark as inactive in DB if expired
         await db.update(
@@ -105,21 +130,6 @@ class SubscriptionNotifier extends StateNotifier<UserSubscriptionState> {
         );
       }
     }
-
-    state = state.copyWith(
-      isSubscribed: isSubscribed,
-      planType: planType,
-      expiryDate: expiryDate,
-    );
-
-    // 3. Setup real billing streams
-    final Stream<List<PurchaseDetails>> purchaseUpdated = _iap.purchaseStream;
-    _iapSubscription = purchaseUpdated.listen(
-      _handlePurchaseUpdates,
-      onError: (error) {
-        debugPrint('Purchase stream error: $error');
-      },
-    );
   }
 
   // Google Login Process
@@ -142,10 +152,58 @@ class SubscriptionNotifier extends StateNotifier<UserSubscriptionState> {
     }
   }
 
+  // Email/Password Sign Up
+  Future<User?> signUpWithEmail(String email, String password, String name) async {
+    try {
+      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      // Update display name
+      await userCredential.user?.updateDisplayName(name);
+      await userCredential.user?.reload();
+      
+      return _auth.currentUser;
+    } catch (e) {
+      debugPrint('Email Sign-Up Error: $e');
+      return null;
+    }
+  }
+
+  // Email/Password Sign In
+  Future<User?> signInWithEmail(String email, String password) async {
+    try {
+      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return userCredential.user;
+    } catch (e) {
+      debugPrint('Email Sign-In Error: $e');
+      return null;
+    }
+  }
+
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await _auth.signOut();
-    state = state.copyWith(user: null);
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      debugPrint('Google Sign-Out ignored (likely no GMS): $e');
+    }
+    
+    try {
+      await _auth.signOut();
+    } catch (e) {
+      debugPrint('Firebase Sign-Out Error: $e');
+    }
+
+    state = state.copyWith(
+      user: null,
+      isSubscribed: false,
+      planType: 'none',
+      expiryDate: null,
+    );
   }
 
   Future<void> _syncFromFirebase(String uid) async {

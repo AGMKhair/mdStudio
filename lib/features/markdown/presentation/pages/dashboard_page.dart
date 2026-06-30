@@ -1532,11 +1532,97 @@ class _SettingsTab extends ConsumerWidget {
       if (user != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Welcome, ${user.displayName}!'),
+            content: Text('Welcome, ${user.displayName ?? user.email}!'),
             backgroundColor: AppColors.success,
           ),
         );
       }
+    }
+
+    void _showEmailAuthDialog(BuildContext context, WidgetRef ref) {
+      final nameController = TextEditingController();
+      final emailController = TextEditingController();
+      final passwordController = TextEditingController();
+      bool isLogin = true;
+
+      showDialog(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(isLogin ? 'Login with Email' : 'Create Account', 
+              style: GoogleFonts.saira(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isLogin)
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Full Name',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                  ),
+                if (!isLogin) const SizedBox(height: 12),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => setState(() => isLogin = !isLogin),
+                  child: Text(isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login",
+                    style: GoogleFonts.saira(fontSize: 12)),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final name = nameController.text.trim();
+                  final email = emailController.text.trim();
+                  final password = passwordController.text.trim();
+                  
+                  if (email.isEmpty || password.isEmpty) return;
+                  if (!isLogin && name.isEmpty) return;
+
+                  final notifier = ref.read(subscriptionProvider.notifier);
+                  final user = isLogin 
+                    ? await notifier.signInWithEmail(email, password)
+                    : await notifier.signUpWithEmail(email, password, name);
+
+                  if (user != null) {
+                    Navigator.of(ctx).pop();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(isLogin ? 'Login Failed' : 'Registration Failed'), 
+                      backgroundColor: AppColors.error),
+                    );
+                  }
+                },
+                child: Text(isLogin ? 'Login' : 'Register'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     Widget buildThemeOption(
@@ -1619,7 +1705,7 @@ class _SettingsTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Login with Google to sync your premium subscription across all your devices securely.',
+                    'Login to sync your premium subscription across all your devices securely.',
                     style: GoogleFonts.saira(fontSize: 12, color: AppColors.grey500),
                   ),
                   const SizedBox(height: 16),
@@ -1640,18 +1726,35 @@ class _SettingsTab extends ConsumerWidget {
                       ),
                     )
                   else
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _handleGoogleLogin(context, ref),
-                        icon: const Icon(Icons.login_rounded),
-                        label: const Text('Sign in with Google'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black87,
-                          side: const BorderSide(color: Colors.grey),
+                    Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _handleGoogleLogin(context, ref),
+                            icon: const Icon(Icons.login_rounded),
+                            label: const Text('Sign in with Google'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black87,
+                              side: const BorderSide(color: Colors.grey),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showEmailAuthDialog(context, ref),
+                            icon: const Icon(Icons.email_rounded),
+                            label: const Text('Sign in with Email'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),

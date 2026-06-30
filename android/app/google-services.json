@@ -43,6 +43,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "691030746412-7sr1sruj1k30st1ons15isaikvopqum3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mdstudio",
+            "certificate_hash": "d66b99ed9b0a20cb24622aaad7a98a6b60ed16c5"
+          }
+        },
+        {
           "client_id": "691030746412-u6578j9629ardjoanh60fpnbjobuh8ib.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
