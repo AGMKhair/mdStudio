@@ -1,8 +1,7 @@
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:share_plus/share_plus.dart';
 
 class DocumentExporter {
   static Future<bool> exportFile({
@@ -11,28 +10,36 @@ class DocumentExporter {
     required String format, // 'md', 'txt', 'html', 'pdf'
   }) async {
     try {
-      final tempDir = await getTemporaryDirectory();
       final sanitizedTitle = title
           .replaceAll(RegExp(r'[^\w\s-]'), '')
           .replaceAll(RegExp(r'\s+'), '_')
           .toLowerCase();
 
+      String extension = format;
+      
+      // Prompt user to pick save location
+      final outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: 'Select where to save the file:',
+        fileName: '$sanitizedTitle.$extension',
+      );
+
+      if (outputFile == null) {
+        return false; // User cancelled
+      }
+
+      final file = File(outputFile);
+
       if (format == 'md') {
-        final file = File('${tempDir.path}/$sanitizedTitle.md');
         await file.writeAsString(content);
-        await Share.shareXFiles([XFile(file.path)], subject: 'Export Markdown File');
         return true;
       }
 
       if (format == 'txt') {
-        final file = File('${tempDir.path}/$sanitizedTitle.txt');
         await file.writeAsString(content);
-        await Share.shareXFiles([XFile(file.path)], subject: 'Export Text File');
         return true;
       }
 
       if (format == 'html') {
-        final file = File('${tempDir.path}/$sanitizedTitle.html');
         final htmlContent = '''
 <!DOCTYPE html>
 <html>
@@ -55,7 +62,6 @@ class DocumentExporter {
 </html>
 ''';
         await file.writeAsString(htmlContent);
-        await Share.shareXFiles([XFile(file.path)], subject: 'Export HTML File');
         return true;
       }
 
@@ -76,9 +82,7 @@ class DocumentExporter {
           ),
         );
 
-        final file = File('${tempDir.path}/$sanitizedTitle.pdf');
         await file.writeAsBytes(await pdf.save());
-        await Share.shareXFiles([XFile(file.path)], subject: 'Export PDF File');
         return true;
       }
 

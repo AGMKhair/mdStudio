@@ -24,6 +24,7 @@ import '../widgets/premium_paywall_popup.dart';
 import '../../../../core/services/update_service.dart';
 import 'editor_page.dart';
 import 'audit_logs_page.dart';
+import 'template_selection_page.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -604,7 +605,21 @@ class _ExplorerTabState extends ConsumerState<_ExplorerTab> {
               if (title.isNotEmpty) {
                 Navigator.of(ctx).pop();
                 if (isFolder) {
-                  await ref.read(markdownFileProvider.notifier).createFolder(title);
+                  final subState = ref.read(subscriptionProvider);
+                  final fileState = ref.read(markdownFileProvider);
+                  final totalFiles = fileState.statistics['totalFiles'] as int? ?? 0;
+                  final totalFolders = fileState.folders.length;
+                  final totalItems = totalFiles + totalFolders;
+
+                  if (!subState.isSubscribed && totalItems >= 3) {
+                    if (context.mounted) {
+                      await AdService.showRewardedVideoAd(context, 'Create Folder', () async {
+                        await ref.read(markdownFileProvider.notifier).createFolder(title);
+                      });
+                    }
+                  } else {
+                    await ref.read(markdownFileProvider.notifier).createFolder(title);
+                  }
                 } else {
                   final newFile = await ref.read(markdownFileProvider.notifier).createFile(
                     title,
@@ -649,21 +664,39 @@ class _ExplorerTabState extends ConsumerState<_ExplorerTab> {
         
         final title = name.replaceAll(RegExp(r'\.(md|txt|markdown)$'), '');
 
-        final newFile = await ref.read(markdownFileProvider.notifier).createFile(
-          title,
-          content,
-          folderId: ref.read(markdownFileProvider).currentFolderId,
-        );
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Successfully imported "${newFile.title}"!'),
-              backgroundColor: AppColors.secondary,
-            ),
+        Future<void> proceedImport() async {
+          final newFile = await ref.read(markdownFileProvider.notifier).createFile(
+            title,
+            content,
+            folderId: ref.read(markdownFileProvider).currentFolderId,
           );
-          ref.read(editorProvider.notifier).openFile(newFile);
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditorPage()));
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Successfully imported "${newFile.title}"!'),
+                backgroundColor: AppColors.secondary,
+              ),
+            );
+            ref.read(editorProvider.notifier).openFile(newFile);
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditorPage()));
+          }
+        }
+
+        final subState = ref.read(subscriptionProvider);
+        final fileState = ref.read(markdownFileProvider);
+        final totalFiles = fileState.statistics['totalFiles'] as int? ?? 0;
+        final totalFolders = fileState.folders.length;
+        final totalItems = totalFiles + totalFolders;
+
+        if (!subState.isSubscribed && totalItems >= 3) {
+          if (context.mounted) {
+            await AdService.showRewardedVideoAd(context, 'Import File', () async {
+              await proceedImport();
+            });
+          }
+        } else {
+          await proceedImport();
         }
       }
     } catch (e) {
@@ -718,7 +751,15 @@ class _ExplorerTabState extends ConsumerState<_ExplorerTab> {
               ),
               const SizedBox(width: 12),
               IconButton.filled(
-                onPressed: () => _createNewFileOrFolderDialog(context, false),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => TemplateSelectionPage(
+                        folderId: ref.read(markdownFileProvider).currentFolderId,
+                      ),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.note_add_rounded),
                 tooltip: 'New Markdown Document',
               ),
@@ -1528,7 +1569,7 @@ class _SettingsTab extends ConsumerWidget {
     final isSmallScreen = screenWidth < 500;
 
     void _handleGoogleLogin(BuildContext context, WidgetRef ref) async {
-      final user = await ref.read(subscriptionProvider.notifier).signInWithGoogle();
+      final user = await ref.read(subscriptionProvider.notifier).signInWithGoogle(context);
       if (user != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1832,7 +1873,7 @@ class _SettingsTab extends ConsumerWidget {
                           child: Column(
                             children: [
                               ElevatedButton(
-                                onPressed: () => ref.read(subscriptionProvider.notifier).purchasePlan('monthly'),
+                                onPressed: () => ref.read(subscriptionProvider.notifier).purchasePlan(context, 'monthly'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: subState.isSubscribed && subState.planType == 'monthly'
                                       ? AppColors.success
@@ -1865,7 +1906,7 @@ class _SettingsTab extends ConsumerWidget {
                           child: Column(
                             children: [
                               ElevatedButton(
-                                onPressed: () => ref.read(subscriptionProvider.notifier).purchasePlan('lifetime'),
+                                onPressed: () => ref.read(subscriptionProvider.notifier).purchasePlan(context, 'lifetime'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: subState.isSubscribed && subState.planType == 'lifetime'
                                       ? AppColors.success

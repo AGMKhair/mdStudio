@@ -10,6 +10,8 @@ import '../providers/editor_provider.dart';
 import '../providers/history_provider.dart';
 import '../providers/security_provider.dart';
 import '../../../../core/utils/exporter.dart';
+import '../../../../core/services/ad_service.dart';
+import '../providers/subscription_provider.dart';
 
 class EditorPage extends ConsumerStatefulWidget {
   const EditorPage({super.key});
@@ -183,18 +185,30 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                     Scaffold.of(context).openEndDrawer();
                   } else if (val.startsWith('export_')) {
                     final format = val.substring('export_'.length);
-                    final success = await DocumentExporter.exportFile(
-                      title: file.title,
-                      content: editorState.currentContent,
-                      format: format,
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(success ? 'Document exported successfully!' : 'Export failed.'),
-                          backgroundColor: success ? AppColors.secondary : AppColors.error,
-                        ),
+                    final subState = ref.read(subscriptionProvider);
+
+                    Future<void> proceedExport() async {
+                      final success = await DocumentExporter.exportFile(
+                        title: file.title,
+                        content: editorState.currentContent,
+                        format: format,
                       );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(success ? 'Document exported successfully!' : 'Export failed or cancelled.'),
+                            backgroundColor: success ? AppColors.secondary : AppColors.error,
+                          ),
+                        );
+                      }
+                    }
+
+                    if (!subState.isSubscribed) {
+                      await AdService.showRewardedVideoAd(context, 'Export File', () async {
+                        await proceedExport();
+                      });
+                    } else {
+                      await proceedExport();
                     }
                   }
                 },
@@ -308,18 +322,30 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                 icon: const Icon(Icons.share_rounded),
                 tooltip: 'Export File',
                 onSelected: (format) async {
-                  final success = await DocumentExporter.exportFile(
-                    title: file.title,
-                    content: editorState.currentContent,
-                    format: format,
-                  );
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(success ? 'Document exported successfully!' : 'Export failed.'),
-                        backgroundColor: success ? AppColors.secondary : AppColors.error,
-                      ),
+                  final subState = ref.read(subscriptionProvider);
+
+                  Future<void> proceedExport() async {
+                    final success = await DocumentExporter.exportFile(
+                      title: file.title,
+                      content: editorState.currentContent,
+                      format: format,
                     );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(success ? 'Document exported successfully!' : 'Export failed or cancelled.'),
+                          backgroundColor: success ? AppColors.secondary : AppColors.error,
+                        ),
+                      );
+                    }
+                  }
+
+                  if (!subState.isSubscribed) {
+                    await AdService.showRewardedVideoAd(context, 'Export File', () async {
+                      await proceedExport();
+                    });
+                  } else {
+                    await proceedExport();
                   }
                 },
                 itemBuilder: (ctx) => [

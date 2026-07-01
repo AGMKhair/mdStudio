@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../../../core/database/database_helper.dart';
@@ -133,7 +135,7 @@ class SubscriptionNotifier extends StateNotifier<UserSubscriptionState> {
   }
 
   // Google Login Process
-  Future<User?> signInWithGoogle() async {
+  Future<User?> signInWithGoogle(BuildContext context) async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
@@ -148,6 +150,60 @@ class SubscriptionNotifier extends StateNotifier<UserSubscriptionState> {
       return userCredential.user;
     } catch (e) {
       debugPrint('Google Sign-In Error: $e');
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.red),
+                const SizedBox(width: 8),
+                Text('Sign-In Issue', style: GoogleFonts.saira(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: [
+                  Text(
+                    'Google Sign-In failed due to configuration setup. Here are common developer/user steps to resolve this:',
+                    style: GoogleFonts.saira(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '1. Firebase Configuration:\n'
+                    'Google Sign-In must be enabled under "Authentication" -> "Sign-in method" in your Firebase console.',
+                    style: GoogleFonts.saira(fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '2. Android Key Fingerprint:\n'
+                    'Register your SHA-1 key (run "./gradlew signingReport" in your Android directory) in your Firebase Project Settings under Android app credentials.',
+                    style: GoogleFonts.saira(fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '3. iOS URL Schemes:\n'
+                    'Make sure the Google reversed Client ID URL scheme is added to Info.plist CFBundleURLTypes.',
+                    style: GoogleFonts.saira(fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Technical Details: $e',
+                    style: GoogleFonts.saira(fontSize: 10, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('OK', style: GoogleFonts.saira(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      }
       return null;
     }
   }
@@ -239,10 +295,10 @@ class SubscriptionNotifier extends StateNotifier<UserSubscriptionState> {
   }
 
   // Purchase Subscription
-  Future<bool> purchasePlan(String plan) async {
+  Future<bool> purchasePlan(BuildContext context, String plan) async {
     // REQUIRE LOGIN BEFORE PURCHASE
     if (state.user == null) {
-      final user = await signInWithGoogle();
+      final user = await signInWithGoogle(context);
       if (user == null) return false; // User cancelled or failed login
     }
 

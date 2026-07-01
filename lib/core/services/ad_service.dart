@@ -6,10 +6,12 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/app_colors.dart';
 import '../config/app_features.dart';
 import '../../features/markdown/presentation/providers/subscription_provider.dart';
+import '../../features/markdown/presentation/widgets/premium_paywall_popup.dart';
 
 class AdService {
   AdService._();
@@ -118,14 +120,55 @@ class AdService {
     }
   }
 
+  // Show Ad Failed to Load Dialog
+  static void _showAdFailedToLoadDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.wifi_off_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            Text('Ad Failed to Load', style: GoogleFonts.saira(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          'We were unable to load a rewarded ad. Please check your internet connection and try again, or buy a subscription to unlock all features immediately.',
+          style: GoogleFonts.saira(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: GoogleFonts.saira(color: AppColors.grey500)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              showDialog(
+                context: context,
+                builder: (context) => const PremiumPaywallPopup(),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber.shade600,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text('Buy Subscription', style: GoogleFonts.saira(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Show Rewarded Video Ad before applying password lock
-  static Future<void> showRewardedVideoAd(BuildContext context, String reason, VoidCallback onAdCompleted) async {
+  static Future<bool> showRewardedVideoAd(BuildContext context, String reason, VoidCallback onAdCompleted) async {
     if (kIsWeb) {
       onAdCompleted();
-      return;
+      return true;
     }
 
-    final Completer<void> completer = Completer<void>();
+    final Completer<bool> completer = Completer<bool>();
     bool isRewarded = false;
 
     // Show loading progress indicator while fetching the ad
@@ -151,12 +194,17 @@ class AdService {
               ad.dispose();
               if (isRewarded) {
                 onAdCompleted();
+                if (!completer.isCompleted) completer.complete(true);
+              } else {
+                if (!completer.isCompleted) completer.complete(false);
               }
-              if (!completer.isCompleted) completer.complete();
             },
             onAdFailedToShowFullScreenContent: (ad, err) {
               ad.dispose();
-              if (!completer.isCompleted) completer.complete();
+              if (context.mounted) {
+                _showAdFailedToLoadDialog(context);
+              }
+              if (!completer.isCompleted) completer.complete(false);
             },
           );
           ad.show(onUserEarnedReward: (adWithoutContent, rewardItem) {
@@ -166,10 +214,10 @@ class AdService {
         onAdFailedToLoad: (error) {
           if (context.mounted) {
             Navigator.of(context).pop(); // dismiss loading dialog
+            _showAdFailedToLoadDialog(context);
           }
           debugPrint('RewardedAd failed to load: $error');
-          onAdCompleted(); // Execute callback anyway to prevent locking user out
-          if (!completer.isCompleted) completer.complete();
+          if (!completer.isCompleted) completer.complete(false);
         },
       ),
     );

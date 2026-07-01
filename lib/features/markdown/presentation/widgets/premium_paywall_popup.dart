@@ -252,7 +252,7 @@ class PremiumPaywallPopup extends ConsumerWidget {
                                     child: ElevatedButton.icon(
                                       onPressed: () async {
                                         if (!await _checkInternet(context)) return;
-                                        await ref.read(subscriptionProvider.notifier).signInWithGoogle();
+                                          await ref.read(subscriptionProvider.notifier).signInWithGoogle(context);
                                       },
                                       icon: const Icon(Icons.login_rounded, size: 16),
                                       label: const Text('Google'),
@@ -312,7 +312,7 @@ class PremiumPaywallPopup extends ConsumerWidget {
                                     }
                                     _showEmailAuthDialog(context, ref);
                                   } else {
-                                    final success = await ref.read(subscriptionProvider.notifier).purchasePlan('monthly');
+                                    final success = await ref.read(subscriptionProvider.notifier).purchasePlan(context, 'monthly');
                                     if (success && context.mounted) {
                                       Navigator.of(context).pop();
                                     }
@@ -364,7 +364,7 @@ class PremiumPaywallPopup extends ConsumerWidget {
                                     }
                                     _showEmailAuthDialog(context, ref);
                                   } else {
-                                    final success = await ref.read(subscriptionProvider.notifier).purchasePlan('lifetime');
+                                    final success = await ref.read(subscriptionProvider.notifier).purchasePlan(context, 'lifetime');
                                     if (success && context.mounted) {
                                       Navigator.of(context).pop();
                                     }

@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/database/database_helper.dart';
 import 'markdown_file_provider.dart';
 
@@ -26,11 +26,20 @@ class SettingsNotifier extends StateNotifier<bool> {
       final file = File(path);
 
       if (await file.exists()) {
-        // Use share_plus to export db file to user destination
-        final xFile = XFile(file.path, mimeType: 'application/x-sqlite3');
-        await Share.shareXFiles([xFile], subject: 'mdStudio Secure Database Backup');
-        state = false;
-        return true;
+        final bytes = await file.readAsBytes();
+        final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        
+        final outputFile = await FilePicker.platform.saveFile(
+          dialogTitle: 'Select where to save the database backup:',
+          fileName: 'mdstudio_backup_$timestamp.db',
+        );
+
+        if (outputFile != null) {
+          final savedFile = File(outputFile);
+          await savedFile.writeAsBytes(bytes);
+          state = false;
+          return true;
+        }
       }
       state = false;
       return false;
