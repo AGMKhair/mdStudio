@@ -16,6 +16,8 @@ class UpdateService {
       await remoteConfig.setDefaults({
         'min_version': '1.0.0',
         'latest_version': '1.0.0',
+        'min_build': 1,
+        'latest_build': 1,
         'update_url': 'https://play.google.com/store/apps/details?id=com.mdstudio',
         'update_message': 'A new version of mdStudio Secure is available. Update now to enjoy the latest features and security enhancements.',
       });
@@ -30,19 +32,39 @@ class UpdateService {
 
       final PackageInfo packageInfo = await PackageInfo.fromPlatform();
       final String currentVersion = packageInfo.version;
+      final int currentBuild = int.tryParse(packageInfo.buildNumber) ?? 1;
 
       final String minVersion = remoteConfig.getString('min_version');
       final String latestVersion = remoteConfig.getString('latest_version');
+      final int minBuild = remoteConfig.getInt('min_build');
+      final int latestBuild = remoteConfig.getInt('latest_build');
       final String updateUrl = remoteConfig.getString('update_url');
       final String updateMessage = remoteConfig.getString('update_message');
 
+      bool isMandatoryUpdate = false;
+      bool isOptionalUpdate = false;
+
+      // Check mandatory update
       if (_isVersionLower(currentVersion, minVersion)) {
-        // Mandatory update
+        isMandatoryUpdate = true;
+      } else if (currentVersion == minVersion && currentBuild < minBuild) {
+        isMandatoryUpdate = true;
+      }
+
+      // Check optional update
+      if (!isMandatoryUpdate) {
+        if (_isVersionLower(currentVersion, latestVersion)) {
+          isOptionalUpdate = true;
+        } else if (currentVersion == latestVersion && currentBuild < latestBuild) {
+          isOptionalUpdate = true;
+        }
+      }
+
+      if (isMandatoryUpdate) {
         if (context.mounted) {
           _showUpdateUI(context, updateUrl, updateMessage, isMandatory: true);
         }
-      } else if (_isVersionLower(currentVersion, latestVersion)) {
-        // Optional update
+      } else if (isOptionalUpdate) {
         if (context.mounted) {
           _showUpdateUI(context, updateUrl, updateMessage, isMandatory: false);
         }

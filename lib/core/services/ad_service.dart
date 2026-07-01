@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -163,7 +163,8 @@ class AdService {
 
   // Show Rewarded Video Ad before applying password lock
   static Future<bool> showRewardedVideoAd(BuildContext context, String reason, VoidCallback onAdCompleted) async {
-    if (kIsWeb) {
+    final isMobile = defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
+    if (kIsWeb || !isMobile) {
       onAdCompleted();
       return true;
     }

@@ -28,6 +28,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
   // Search and replace state
   bool _showSearchReplace = false;
   bool _showPreviewOnMobile = false;
+  bool _showLineNumbers = true;
   final _searchController = TextEditingController();
   final _replaceController = TextEditingController();
   final _focusNode = FocusNode();
@@ -163,6 +164,14 @@ class _EditorPageState extends ConsumerState<EditorPage> {
           if (isMobile) {
             return [
               IconButton(
+                onPressed: () => setState(() => _showLineNumbers = !_showLineNumbers),
+                icon: Icon(
+                  Icons.format_list_numbered_rounded,
+                  color: _showLineNumbers ? AppColors.primary : AppColors.grey500,
+                ),
+                tooltip: _showLineNumbers ? 'Hide Line Numbers' : 'Show Line Numbers',
+              ),
+              IconButton(
                 onPressed: () => setState(() => _showPreviewOnMobile = !_showPreviewOnMobile),
                 icon: Icon(_showPreviewOnMobile ? Icons.edit_rounded : Icons.visibility_rounded),
                 tooltip: _showPreviewOnMobile ? 'Switch to Editor' : 'Switch to Preview',
@@ -174,13 +183,40 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                   if (val == 'search_replace') {
                     setState(() => _showSearchReplace = !_showSearchReplace);
                   } else if (val == 'unlock') {
-                    await ref.read(securityProvider.notifier).removeFileLock(file.id!);
-                    ref.read(editorProvider.notifier).openFile(file.copyWith(isLocked: false, lockType: null));
+                    final subState = ref.read(subscriptionProvider);
+                    Future<void> proceedUnlock() async {
+                      await ref.read(securityProvider.notifier).removeFileLock(file.id!);
+                      ref.read(editorProvider.notifier).openFile(file.copyWith(isLocked: false, lockType: null));
+                    }
+                    if (subState.isSubscribed) {
+                      await proceedUnlock();
+                    } else {
+                      await AdService.showRewardedVideoAd(context, 'Unlock File', () async {
+                        await proceedUnlock();
+                      });
+                    }
                   } else if (val == 'lock_password') {
-                    _showSetPasswordLockDialog(file.id!);
+                    final subState = ref.read(subscriptionProvider);
+                    if (subState.isSubscribed) {
+                      _showSetPasswordLockDialog(file.id!);
+                    } else {
+                      await AdService.showRewardedVideoAd(context, 'Lock File', () {
+                        _showSetPasswordLockDialog(file.id!);
+                      });
+                    }
                   } else if (val == 'lock_biometric') {
-                    await ref.read(securityProvider.notifier).lockFileWithBiometrics(file.id!);
-                    ref.read(editorProvider.notifier).openFile(file.copyWith(isLocked: true, lockType: 'biometric'));
+                    final subState = ref.read(subscriptionProvider);
+                    Future<void> proceedBiometric() async {
+                      await ref.read(securityProvider.notifier).lockFileWithBiometrics(file.id!);
+                      ref.read(editorProvider.notifier).openFile(file.copyWith(isLocked: true, lockType: 'biometric'));
+                    }
+                    if (subState.isSubscribed) {
+                      await proceedBiometric();
+                    } else {
+                      await AdService.showRewardedVideoAd(context, 'Lock File', () async {
+                        await proceedBiometric();
+                      });
+                    }
                   } else if (val == 'history') {
                     Scaffold.of(context).openEndDrawer();
                   } else if (val.startsWith('export_')) {
@@ -280,11 +316,26 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                       title: Text('Export as Text'),
                     ),
                   ),
+                  const PopupMenuItem(
+                    value: 'export_doc',
+                    child: ListTile(
+                      leading: Icon(Icons.article_rounded),
+                      title: Text('Export as Word Document'),
+                    ),
+                  ),
                 ],
               ),
             ];
           } else {
             return [
+              IconButton(
+                onPressed: () => setState(() => _showLineNumbers = !_showLineNumbers),
+                icon: Icon(
+                  Icons.format_list_numbered_rounded,
+                  color: _showLineNumbers ? AppColors.primary : AppColors.grey500,
+                ),
+                tooltip: _showLineNumbers ? 'Hide Line Numbers' : 'Show Line Numbers',
+              ),
               IconButton(
                 onPressed: () => setState(() => _showSearchReplace = !_showSearchReplace),
                 icon: const Icon(Icons.find_replace_rounded),
@@ -300,13 +351,40 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                 tooltip: 'File Encryption Settings',
                 onSelected: (val) async {
                   if (val == 'unlock') {
-                    await ref.read(securityProvider.notifier).removeFileLock(file.id!);
-                    ref.read(editorProvider.notifier).openFile(file.copyWith(isLocked: false, lockType: null));
+                    final subState = ref.read(subscriptionProvider);
+                    Future<void> proceedUnlock() async {
+                      await ref.read(securityProvider.notifier).removeFileLock(file.id!);
+                      ref.read(editorProvider.notifier).openFile(file.copyWith(isLocked: false, lockType: null));
+                    }
+                    if (subState.isSubscribed) {
+                      await proceedUnlock();
+                    } else {
+                      await AdService.showRewardedVideoAd(context, 'Unlock File', () async {
+                        await proceedUnlock();
+                      });
+                    }
                   } else if (val == 'lock_password') {
-                    _showSetPasswordLockDialog(file.id!);
+                    final subState = ref.read(subscriptionProvider);
+                    if (subState.isSubscribed) {
+                      _showSetPasswordLockDialog(file.id!);
+                    } else {
+                      await AdService.showRewardedVideoAd(context, 'Lock File', () {
+                        _showSetPasswordLockDialog(file.id!);
+                      });
+                    }
                   } else if (val == 'lock_biometric') {
-                    await ref.read(securityProvider.notifier).lockFileWithBiometrics(file.id!);
-                    ref.read(editorProvider.notifier).openFile(file.copyWith(isLocked: true, lockType: 'biometric'));
+                    final subState = ref.read(subscriptionProvider);
+                    Future<void> proceedBiometric() async {
+                      await ref.read(securityProvider.notifier).lockFileWithBiometrics(file.id!);
+                      ref.read(editorProvider.notifier).openFile(file.copyWith(isLocked: true, lockType: 'biometric'));
+                    }
+                    if (subState.isSubscribed) {
+                      await proceedBiometric();
+                    } else {
+                      await AdService.showRewardedVideoAd(context, 'Lock File', () async {
+                        await proceedBiometric();
+                      });
+                    }
                   }
                 },
                 itemBuilder: (ctx) => [
@@ -353,6 +431,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                   const PopupMenuItem(value: 'pdf', child: Text('Export as PDF (.pdf)')),
                   const PopupMenuItem(value: 'html', child: Text('Export as HTML (.html)')),
                   const PopupMenuItem(value: 'txt', child: Text('Export as Text (.txt)')),
+                  const PopupMenuItem(value: 'doc', child: Text('Export as Word (.doc)')),
                 ],
               ),
               Builder(
@@ -403,31 +482,32 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Gutter line numbers
-                        Container(
-                          width: 40,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF0B0E1B) : AppColors.grey50,
-                            border: Border(
-                              right: BorderSide(
-                                color: isDark ? AppColors.grey800 : AppColors.grey200,
+                        if (_showLineNumbers)
+                          Container(
+                            width: 40,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF0B0E1B) : AppColors.grey50,
+                              border: Border(
+                                right: BorderSide(
+                                  color: isDark ? AppColors.grey800 : AppColors.grey200,
+                                ),
+                              ),
+                            ),
+                            child: SingleChildScrollView(
+                              controller: _gutterScrollController,
+                              physics: const NeverScrollableScrollPhysics(),
+                              child: Text(
+                                lineNumbersText,
+                                style: GoogleFonts.sourceCodePro(
+                                  color: AppColors.grey400,
+                                  fontSize: 13,
+                                  height: 1.5,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                           ),
-                          child: SingleChildScrollView(
-                            controller: _gutterScrollController,
-                            physics: const NeverScrollableScrollPhysics(),
-                            child: Text(
-                              lineNumbersText,
-                              style: GoogleFonts.sourceCodePro(
-                                color: AppColors.grey400,
-                                fontSize: 13,
-                                height: 1.5,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
                         // Editor TextField
                         Expanded(
                           child: Padding(
@@ -470,31 +550,32 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Container(
-                              width: 40,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF0B0E1B) : AppColors.grey50,
-                                border: Border(
-                                  right: BorderSide(
-                                    color: isDark ? AppColors.grey800 : AppColors.grey200,
+                            if (_showLineNumbers)
+                              Container(
+                                width: 40,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF0B0E1B) : AppColors.grey50,
+                                  border: Border(
+                                    right: BorderSide(
+                                      color: isDark ? AppColors.grey800 : AppColors.grey200,
+                                    ),
+                                  ),
+                                ),
+                                child: SingleChildScrollView(
+                                  controller: _gutterScrollController,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  child: Text(
+                                    lineNumbersText,
+                                    style: GoogleFonts.sourceCodePro(
+                                      color: AppColors.grey400,
+                                      fontSize: 13,
+                                      height: 1.5,
+                                    ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ),
-                              child: SingleChildScrollView(
-                                controller: _gutterScrollController,
-                                physics: const NeverScrollableScrollPhysics(),
-                                child: Text(
-                                  lineNumbersText,
-                                  style: GoogleFonts.sourceCodePro(
-                                    color: AppColors.grey400,
-                                    fontSize: 13,
-                                    height: 1.5,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
                             Expanded(
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 12),

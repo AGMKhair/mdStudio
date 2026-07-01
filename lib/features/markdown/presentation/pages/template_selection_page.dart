@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_templates.dart';
@@ -8,14 +9,17 @@ import '../../../../core/services/ad_service.dart';
 import '../providers/markdown_file_provider.dart';
 import '../providers/editor_provider.dart';
 import '../providers/subscription_provider.dart';
+import '../widgets/premium_paywall_popup.dart';
 import 'editor_page.dart';
 
 class TemplateSelectionPage extends ConsumerStatefulWidget {
   final int? folderId;
+  final bool bypassAdCheck;
 
   const TemplateSelectionPage({
     super.key,
     this.folderId,
+    this.bypassAdCheck = false,
   });
 
   @override
@@ -77,14 +81,95 @@ class _TemplateSelectionPageState extends ConsumerState<TemplateSelectionPage> {
       }
     }
 
-    if (!subState.isSubscribed) {
-      // User must watch a rewarded ad to create document from a template/blank file
+    if (subState.isSubscribed || widget.bypassAdCheck) {
+      await proceedCreation();
+      return;
+    }
+
+    final fileState = ref.read(markdownFileProvider);
+    final totalFiles = fileState.statistics['totalFiles'] as int? ?? 0;
+
+    if (totalFiles >= 3) {
+      final prefs = await SharedPreferences.getInstance();
+      final hasShownDialog = prefs.getBool('has_shown_limit_choice_dialog') ?? false;
+
+      if (!hasShownDialog) {
+        if (mounted) {
+          _showFileLimitChoiceDialog(context, () async {
+            await AdService.showRewardedVideoAd(context, 'Create File', () async {
+              await proceedCreation();
+            });
+          });
+        }
+      } else {
+        if (mounted) {
+          await AdService.showRewardedVideoAd(context, 'Create File', () async {
+            await proceedCreation();
+          });
+        }
+      }
+    } else {
       await AdService.showRewardedVideoAd(context, 'Create File', () async {
         await proceedCreation();
       });
-    } else {
-      await proceedCreation();
     }
+  }
+
+  void _showFileLimitChoiceDialog(BuildContext context, VoidCallback onAdOptionSelected) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: Colors.amber, size: 28),
+            const SizedBox(width: 8),
+            Text(
+              'File Limit Reached',
+              style: GoogleFonts.saira(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Text(
+          'You have reached the limit of 3 free files.\n\nSubscribe to MDStudio Premium for unlimited files and an ad-free experience, or watch a short video ad to create this file for free!',
+          style: GoogleFonts.saira(fontSize: 14),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('has_shown_limit_choice_dialog', true);
+              onAdOptionSelected();
+            },
+            child: Text(
+              'Watch Ad & Create',
+              style: GoogleFonts.saira(fontWeight: FontWeight.bold, color: AppColors.primary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              showDialog(
+                context: context,
+                builder: (context) => const PremiumPaywallPopup(),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber.shade600,
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(
+              'Go Premium',
+              style: GoogleFonts.saira(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -337,55 +422,54 @@ class _TemplateSelectionPageState extends ConsumerState<TemplateSelectionPage> {
                       },
                     ),
             ),
-
-            // Bottom Creation Bar
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF161F38) : Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF161F38) : Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Selected Template:',
+                    style: GoogleFonts.saira(fontSize: 11, color: AppColors.grey500),
+                  ),
+                  Text(
+                    _selectedTemplate.title,
+                    style: GoogleFonts.saira(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Selected Template:',
-                          style: GoogleFonts.saira(fontSize: 11, color: AppColors.grey500),
-                        ),
-                        Text(
-                          _selectedTemplate.title,
-                          style: GoogleFonts.saira(fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: _handleCreate,
-                    icon: const Icon(Icons.create_rounded, color: Colors.white),
-                    label: Text(
-                      'Create Document',
-                      style: GoogleFonts.saira(fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ],
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: _handleCreate,
+              icon: const Icon(Icons.create_rounded, color: Colors.white),
+              label: Text(
+                'Create Document',
+                style: GoogleFonts.saira(fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                minimumSize: Size.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],

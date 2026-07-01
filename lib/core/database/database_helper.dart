@@ -52,13 +52,18 @@ class DatabaseHelper {
 
     // Dynamically alter existing folders table to prevent runtime schema mismatch
     try {
-      await db.execute('ALTER TABLE folders ADD COLUMN is_locked INTEGER DEFAULT 0');
-    } catch (_) {}
-    try {
-      await db.execute('ALTER TABLE folders ADD COLUMN lock_type TEXT');
-    } catch (_) {}
-    try {
-      await db.execute('ALTER TABLE folders ADD COLUMN password_hash TEXT');
+      final List<Map<String, dynamic>> tableInfo = await db.rawQuery('PRAGMA table_info(folders)');
+      final existingColumns = tableInfo.map((c) => c['name'] as String).toSet();
+
+      if (!existingColumns.contains('is_locked')) {
+        await db.execute('ALTER TABLE folders ADD COLUMN is_locked INTEGER DEFAULT 0');
+      }
+      if (!existingColumns.contains('lock_type')) {
+        await db.execute('ALTER TABLE folders ADD COLUMN lock_type TEXT');
+      }
+      if (!existingColumns.contains('password_hash')) {
+        await db.execute('ALTER TABLE folders ADD COLUMN password_hash TEXT');
+      }
     } catch (_) {}
   }
 
