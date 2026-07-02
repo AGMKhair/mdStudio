@@ -25,112 +25,204 @@ class AppTemplates {
       icon: Icons.note_add_rounded,
       content: '# New Document\n\nWrite content here...',
     ),
-    // CV / Resume
+    
+    // --- SINGLE COLUMN CVs (Top - Most Compatible) ---
+    
     TemplateItem(
-      title: 'Professional CV',
-      description: 'A classic, clean resume format for corporate & technical roles.',
+      title: 'Professional Modern CV',
+      description: 'A sleek, single-column design with a clear hierarchy and modern look.',
       category: 'CV',
       icon: Icons.badge_rounded,
-      content: '''# [Your Name]
-**[Your Profession / Title]**
-
-- 📧 Email: info@domain.com
-- 📞 Phone: +123 4567 890
-- 🌐 Portfolio: portfolio.com
-- 📍 Address: New York, USA
+      content: '''# [YOUR FULL NAME]
+### [Desired Job Title | Senior Specialist]
 
 ---
 
-## Executive Summary
-Highly motivated professional with 5+ years of experience in software development and team leadership. Proven track record of delivering high-quality web and mobile applications.
+**[Email Address]**  |  **[Phone Number]**  |  **[LinkedIn/Portfolio]**  |  **[Location]**
 
-## Professional Experience
+---
 
-### Senior Developer | Tech Corp (2022 - Present)
-- Led a team of 5 developers to deliver cloud-based enterprise solutions.
-- Improved application performance by 40% using optimization techniques.
-- Mentored junior engineers and established testing guidelines.
+## 🚀 PROFESSIONAL PROFILE
+Highly motivated and results-oriented professional with 5+ years of experience in [Your Industry]. Proven ability to lead teams, optimize workflows, and deliver high-impact results. Expert in [Skill 1], [Skill 2], and [Skill 3].
 
-### Software Engineer | Dev Studio (2019 - 2022)
-- Developed and maintained native mobile applications in Flutter.
-- Collaborated with product designers to implement pixel-perfect interfaces.
+## 💼 WORK EXPERIENCE
 
-## Education
-- **B.Sc. in Computer Science** | University of Technology (2015 - 2019)
+#### **Lead Developer** | Tech Innovations Inc. | *Jan 2021 — Present*
+- Spearheaded the development of a flagship mobile application with 1M+ downloads.
+- Improved system performance by 40% through code optimization and architecture refactoring.
+- Led a cross-functional team of 8 to deliver projects ahead of schedule.
 
-## Skills
-- Flutter, Dart, Java, Python
-- SQLite, PostgreSQL, Firebase
-- Git, CI/CD, Agile Methodologies
+#### **Senior Engineer** | Global Solutions Ltd. | *June 2018 — Dec 2020*
+- Built and maintained secure, scalable cloud infrastructure for fintech clients.
+- Implemented automated CI/CD pipelines, reducing deployment errors by 25%.
+- Mentored junior staff and established internal best practices for code quality.
+
+## 🎓 EDUCATION
+- **Master of Science in Technology** | National University (2018)
+- **Bachelor of Engineering** | City Technical Institute (2015)
+
+## 🛠️ CORE EXPERTISE
+- **Programming**: Dart, Flutter, Python, SQL, JavaScript
+- **Infrastructure**: AWS, Docker, Firebase, Kubernetes
+- **Soft Skills**: Strategic Planning, Leadership, Project Management
 ''',
     ),
+
     TemplateItem(
-      title: 'Creative CV',
-      description: 'A vibrant, modern resume layout for designers, developers, and creatives.',
+      title: 'Minimalist Clean CV',
+      description: 'A beautiful, minimal design that focuses entirely on your content.',
       category: 'CV',
-      icon: Icons.brush_rounded,
-      content: '''# 🌟 [YOUR NAME]
-🚀 *Creative UI/UX Designer & Frontend Developer*
+      icon: Icons.auto_awesome_mosaic_rounded,
+      content: '''# [YOUR NAME]
+**[Job Title / Tagline]**
 
 ---
 
-### 📬 Contact Info
-- 📧 Email: hello@creative.design
-- 🌐 Web: www.creativedesign.me
-- 📍 Location: London, UK
+📧 [email@example.com]
+📞 [+880 1234-567890]
+🌐 [portfolio.me]
+📍 [Dhaka, Bangladesh]
 
 ---
 
-### 🛠️ Core Skills
-- **Design**: Figma, Adobe XD, Prototyping, Wireframing
-- **Frontend**: HTML5, CSS3, JavaScript, Flutter, React
-- **Concepts**: User Research, Design Systems, Typography
+### SUMMARY
+Dedicated professional with a passion for excellence and a track record of success in [Your Field]. Expert at solving complex problems and building scalable solutions.
 
----
+### EXPERIENCE
 
-### 💼 Experience
+**Senior Mobile Developer** | Tech Solutions | *2021 - Now*
+- Developed 5+ high-performance Flutter applications.
+- Integrated third-party APIs and complex payment gateways.
+- Optimized app memory usage, reducing crashes by 15%.
 
-**Lead Designer** | Design Lab | *2021 - Present*
-- Created custom branding and digital identities for over 15 startups.
-- Redesigned the main dashboard portal, increasing user retention by 25%.
-
-**UI Designer** | Web Agency | *2019 - 2021*
-- Designed and built responsive web layouts for global e-commerce clients.
-- Collaborated closely with backend engineers to integrate API responses.
-
----
-
-### 🎓 Education
-**B.FA in Graphic Design** | Arts Academy | *2015 - 2018*
-''',
-    ),
-    TemplateItem(
-      title: 'Modern CV',
-      description: 'A structured, clean-cut modern resume layout with clear tables and listings.',
-      category: 'CV',
-      icon: Icons.dashboard_customize_rounded,
-      content: '''# Name: [Your Name]
-**Title: Full Stack Software Engineer**
-
----
-
-### PROFILE
-Solution-oriented engineer with deep expertise in full-stack web and mobile systems. Proven record of building secure, scalable architectures.
-
-### PROFESSIONAL EXPERIENCE
-
-**Full Stack Developer** - Solutions Inc. (2020 - Present)
-- Designed and implemented microservices architectures handling 100k+ daily requests.
-- Built cross-platform applications using Flutter and Riverpod.
-
-**Backend Engineer** - Core Systems (2018 - 2020)
-- Developed secure API endpoints and managed relational database schemas.
+**Junior Developer** | App Studio | *2019 - 2021*
+- Assisted in building cross-platform apps for global clients.
+- Conducted unit testing and fixed critical bugs in legacy systems.
 
 ### EDUCATION
-- **Master of Computer Applications** | Global University (2016 - 2018)
-- **Bachelor of Computer Applications** | Global University (2013 - 2016)
+- **B.Sc. in Computer Science** | University of Engineering (2018)
+
+### SKILLS
+- **Mobile**: Flutter, Dart, Android, iOS
+- **Backend**: Node.js, Firebase, MongoDB
+- **Tools**: Git, Figma, JIRA, Trello
 ''',
     ),
+
+    TemplateItem(
+      title: 'Creative Brand CV',
+      description: 'A stylish layout for creative professionals to showcase their brand.',
+      category: 'CV',
+      icon: Icons.brush_rounded,
+      content: '''# 🎨 [YOUR BRAND NAME]
+### *Visual Storyteller & UI Designer*
+
+---
+
+### 📬 CONNECT
+- 📧 hello@creative.design
+- 🌐 www.creativedesign.me
+- 📍 London, UK
+
+### 🌟 HIGHLIGHTS
+- **5+ Years** of experience in digital product design and branding.
+- **Expertise** in high-fidelity prototyping and user-centered research.
+- **Award-winning** portfolio featured on top design platforms.
+
+---
+
+### 💼 MY JOURNEY
+
+**Senior UI Designer** | Pixel Lab | *2021 - Present*
+- Created custom branding and digital identities for over 15 startups.
+- Redesigned the main dashboard portal, increasing user engagement by 30%.
+
+**Graphic Designer** | Web Agency | *2018 - 2021*
+- Designed responsive web layouts for global e-commerce brands.
+- Collaborated with developers to ensure pixel-perfect implementation.
+
+### 🎓 ACADEMIC RECORD
+**B.FA in Graphic Design** | Arts Academy | *2015 - 2018*
+
+### 🛠️ DESIGN TOOLS
+- **Design**: Figma, Adobe XD, Photoshop, Illustrator
+- **Motion**: After Effects, Lottie, Rive
+- **Process**: Wireframing, User Flow, Design Systems
+''',
+    ),
+
+    // --- 2-COLUMN CVs (Bottom - For Information Dense Resumes) ---
+    
+    TemplateItem(
+      title: 'Premium Sidebar CV (2-Col)',
+      description: 'A professional 2-column layout with a sidebar for info and skills.',
+      category: 'CV',
+      icon: Icons.view_sidebar_rounded,
+      content: '''# [Your Name]
+**[Senior Position Title]**
+
+---
+
+| **CONTACT & SKILLS** | **CAREER SUMMARY** |
+| :--- | :--- |
+| **GET IN TOUCH** | **PROFESSIONAL PROFILE** |
+| ✉️ your@email.com | Results-driven engineer with 5+ years |
+| 📞 +880123456789 | of experience in building enterprise- |
+| 📍 Dhaka, BD | grade mobile and cloud systems. |
+| 🌐 portfolio.link | |
+| | **EXPERIENCE** |
+| **TOP SKILLS** | **Lead Mobile Dev** \| Tech Corp |
+| • Flutter & Dart | *2021 - Present* |
+| • Firebase / SQL | • Scaling apps to 1M+ active users. |
+| • Node.js / Go | • Implementing Clean Architecture. |
+| • AWS / DevOps | |
+| • Team Mgmt | **Software Engineer** \| Startup |
+| | *2018 - 2020* |
+| **LANGUAGES** | • Built core features for fintech app. |
+| • English (Expert) | • Reduced API latency by 50%. |
+| • Bengali (Native) | |
+| | **EDUCATION** |
+| **AWARDS** | • **B.Sc. in CS** \| Tech University |
+| • Best Dev 2023 | • **HSC** \| Science Background |
+
+---
+''',
+    ),
+
+    TemplateItem(
+      title: 'Executive Split CV (2-Col)',
+      description: 'A high-level layout separating expertise from experience.',
+      category: 'CV',
+      icon: Icons.dashboard_customize_rounded,
+      content: '''# [YOUR FULL NAME]
+**[Executive Management Title]**
+
+---
+
+| **EXPERTISE** | **CAREER TRACK** |
+| :--- | :--- |
+| **CORE SKILLS** | **PROFESSIONAL ROLE** |
+| • Strategic Ops | **Project Director** \| Lead Corp |
+| • Team Leadership | *2021 - Present* |
+| • Budget Mgmt | • Managing budgets over \$5M. |
+| • Risk Analysis | • Directing 50+ staff members. |
+| • Digital Trans. | • Improved ROI by 20% in 1 year. |
+| | |
+| **TECH STACK** | **Operations Manager** \| Global |
+| • System Design | *2018 - 2021* |
+| • Data Science | • Designed core infra workflows. |
+| • Cyber Security | • Implemented ISO standards. |
+| • Cloud Arch. | • Led digital migration projects. |
+| | |
+| **CERTIFICATIONS** | **ACADEMIC BACKGROUND** |
+| • PMP Certified | • **MBA** \| Business School |
+| • Azure Expert | • **B.Eng** \| Engineering College |
+| • Scrum Master | • **Diploma** \| Project Mgmt |
+
+---
+''',
+    ),
+
     // Cover Letters
     TemplateItem(
       title: 'Standard Cover Letter',

@@ -231,16 +231,17 @@ class DocumentExporter {
         continue;
       }
 
-      if (line.startsWith('- ') || line.startsWith('* ')) {
+      if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('• ')) {
+        final content = line.startsWith('• ') ? line.substring(2) : line.substring(2);
         widgets.add(pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Container(
               width: 15,
-              child: pw.Text('• ', style: const pw.TextStyle(fontSize: 10)),
+              child: pw.Text('• ', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
             ),
             pw.Expanded(
-              child: _parseInlineText(line.substring(2), fontSize: 10),
+              child: _parseInlineText(content, fontSize: 10),
             ),
           ],
         ));
@@ -317,6 +318,7 @@ class DocumentExporter {
             nextLine.startsWith('> ') ||
             nextLine.startsWith('- ') ||
             nextLine.startsWith('* ') ||
+            nextLine.startsWith('• ') ||
             nextLine.startsWith('|') ||
             nextLine == '---' ||
             nextLine == '***' ||
