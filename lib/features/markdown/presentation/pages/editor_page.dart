@@ -32,6 +32,9 @@ class _EditorPageState extends ConsumerState<EditorPage> {
   final _searchController = TextEditingController();
   final _replaceController = TextEditingController();
   final _focusNode = FocusNode();
+  
+  double _editorFontSize = 14.0;
+  double _baseFontSize = 14.0;
 
   @override
   void initState() {
@@ -76,19 +79,122 @@ class _EditorPageState extends ConsumerState<EditorPage> {
       end = text.length;
     }
 
-    final selectedText = text.substring(start, end);
-    final replacement = '$prefix$selectedText$suffix';
-
-    final newText = text.replaceRange(start, end, replacement);
+    // If it's a list type prefix, handle multiline selection
+    final isListType = prefix == '- ' || prefix == '1. ' || prefix == '- [ ] ';
     
-    ref.read(editorProvider.notifier).updateContent(newText);
-    _textController.value = _textController.value.copyWith(
-      text: newText,
-      selection: TextSelection(
-        baseOffset: start + prefix.length,
-        extentOffset: start + prefix.length + selectedText.length,
+    if (start == end) {
+      final newText = text.replaceRange(start, end, prefix + suffix);
+      ref.read(editorProvider.notifier).updateContent(newText);
+      _textController.value = _textController.value.copyWith(
+        text: newText,
+        selection: TextSelection.collapsed(offset: start + prefix.length),
+      );
+    } else {
+      final selectedText = text.substring(start, end);
+      
+      if (isListType) {
+        final lines = selectedText.split('\n');
+        final modifiedLines = <String>[];
+        
+        for (int i = 0; i < lines.length; i++) {
+          if (prefix == '1. ') {
+            modifiedLines.add('${i + 1}. ${lines[i]}');
+          } else {
+            modifiedLines.add(prefix + lines[i]);
+          }
+        }
+        
+        final replacement = modifiedLines.join('\n');
+        final newText = text.replaceRange(start, end, replacement);
+        ref.read(editorProvider.notifier).updateContent(newText);
+        _textController.value = _textController.value.copyWith(
+          text: newText,
+          selection: TextSelection(
+            baseOffset: start,
+            extentOffset: start + replacement.length,
+          ),
+        );
+      } else {
+        final replacement = prefix + selectedText + suffix;
+        final newText = text.replaceRange(start, end, replacement);
+        ref.read(editorProvider.notifier).updateContent(newText);
+        _textController.value = _textController.value.copyWith(
+          text: newText,
+          selection: TextSelection(
+            baseOffset: start,
+            extentOffset: start + replacement.length,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showTableDialog() {
+    final rowsController = TextEditingController(text: '3');
+    final colsController = TextEditingController(text: '3');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Insert Table', style: GoogleFonts.saira(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: rowsController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Rows'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: colsController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Columns'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final rows = int.tryParse(rowsController.text) ?? 0;
+              final cols = int.tryParse(colsController.text) ?? 0;
+              if (rows > 0 && cols > 0) {
+                _insertTable(rows, cols);
+              }
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Insert'),
+          ),
+        ],
       ),
     );
+  }
+
+  void _insertTable(int rows, int cols) {
+    StringBuffer sb = StringBuffer('\n');
+    // Header
+    sb.write('|');
+    for (int i = 0; i < cols; i++) {
+      sb.write(' Header ${i + 1} |');
+    }
+    sb.write('\n|');
+    // Divider
+    for (int i = 0; i < cols; i++) {
+      sb.write(' --- |');
+    }
+    sb.write('\n');
+    // Rows
+    for (int r = 0; r < rows; r++) {
+      sb.write('|');
+      for (int c = 0; c < cols; c++) {
+        sb.write(' Cell |');
+      }
+      sb.write('\n');
+    }
+    _insertMarkdownTag(sb.toString());
   }
 
   void _replaceAll() {
@@ -115,6 +221,112 @@ class _EditorPageState extends ConsumerState<EditorPage> {
     return text.trim().split(RegExp(r'\s+')).length;
   }
 
+  Widget _buildEditorView(bool isDark) {
+    final lineNumbersText = List.generate(
+      '\n'.allMatches(_textController.text).length + 1,
+      (index) => '${index + 1}',
+    ).join('\n');
+
+    return GestureDetector(
+      onScaleStart: (details) {
+        _baseFontSize = _editorFontSize;
+      },
+      onScaleUpdate: (details) {
+        setState(() {
+          _editorFontSize = (_baseFontSize * details.scale).clamp(8.0, 50.0);
+        });
+      },
+      child: Container(
+        color: isDark ? const Color(0xFF0F1424) : Colors.white,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Gutter line numbers
+            if (_showLineNumbers)
+              Container(
+                width: 40,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0B0E1B) : AppColors.grey50,
+                  border: Border(
+                    right: BorderSide(
+                      color: isDark ? AppColors.grey800 : AppColors.grey200,
+                    ),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  controller: _gutterScrollController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Text(
+                    lineNumbersText,
+                    style: GoogleFonts.sourceCodePro(
+                      color: AppColors.grey400,
+                      fontSize: _editorFontSize - 1,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            // Editor TextField
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: TextField(
+                  controller: _textController,
+                  scrollController: _scrollController,
+                  focusNode: _focusNode,
+                  keyboardType: TextInputType.multiline,
+                  maxLines: null,
+                  expands: true,
+                  style: GoogleFonts.sourceCodePro(
+                    fontSize: _editorFontSize,
+                    height: 1.5,
+                    color: isDark ? Colors.white : AppColors.grey900,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  onChanged: (text) {
+                    ref.read(editorProvider.notifier).updateContent(text);
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewView(bool isDark, EditorState editorState) {
+    final content = editorState.currentContent;
+    // Appending newline is a known fix for certain flutter_markdown parsing crashes (e.g. _inlines.isEmpty assertion)
+    final sanitiedContent = content.endsWith('\n') ? content : '$content\n';
+
+    return Container(
+      color: isDark ? AppColors.darkScaffoldBg : AppColors.scaffoldBg,
+      padding: const EdgeInsets.all(AppDimensions.paddingM),
+      child: SingleChildScrollView(
+        key: ValueKey(editorState.activeFile?.id ?? 'preview'),
+        child: MarkdownBody(
+          data: sanitiedContent,
+          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+            p: GoogleFonts.saira(fontSize: 14),
+            h1: GoogleFonts.saira(fontSize: 22, fontWeight: FontWeight.bold),
+            h2: GoogleFonts.saira(fontSize: 18, fontWeight: FontWeight.bold),
+            h3: GoogleFonts.saira(fontSize: 16, fontWeight: FontWeight.bold),
+            code: GoogleFonts.sourceCodePro(fontSize: 12, backgroundColor: isDark ? AppColors.grey800 : AppColors.grey100),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final editorState = ref.watch(editorProvider);
@@ -125,10 +337,6 @@ class _EditorPageState extends ConsumerState<EditorPage> {
         body: Center(child: Text('No document loaded.')),
       );
     }
-
-    // Recalculate line numbers
-    final linesCount = '\n'.allMatches(editorState.currentContent).length + 1;
-    final lineNumbersText = List.generate(linesCount, (i) => '${i + 1}').join('\n');
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -461,152 +669,15 @@ class _EditorPageState extends ConsumerState<EditorPage> {
               final isMobile = MediaQuery.of(context).size.width <= 600;
               if (isMobile) {
                 if (_showPreviewOnMobile) {
-                  return Container(
-                    color: isDark ? AppColors.darkScaffoldBg : AppColors.scaffoldBg,
-                    padding: const EdgeInsets.all(AppDimensions.paddingM),
-                    child: Markdown(
-                      data: editorState.currentContent,
-                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                        p: GoogleFonts.saira(fontSize: 14),
-                        h1: GoogleFonts.saira(fontSize: 22, fontWeight: FontWeight.bold),
-                        h2: GoogleFonts.saira(fontSize: 18, fontWeight: FontWeight.bold),
-                        h3: GoogleFonts.saira(fontSize: 16, fontWeight: FontWeight.bold),
-                        code: GoogleFonts.sourceCodePro(fontSize: 12, backgroundColor: isDark ? AppColors.grey800 : AppColors.grey100),
-                      ),
-                    ),
-                  );
+                  return _buildPreviewView(isDark, editorState);
                 } else {
-                  return Container(
-                    color: isDark ? const Color(0xFF0F1424) : Colors.white,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Gutter line numbers
-                        if (_showLineNumbers)
-                          Container(
-                            width: 40,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF0B0E1B) : AppColors.grey50,
-                              border: Border(
-                                right: BorderSide(
-                                  color: isDark ? AppColors.grey800 : AppColors.grey200,
-                                ),
-                              ),
-                            ),
-                            child: SingleChildScrollView(
-                              controller: _gutterScrollController,
-                              physics: const NeverScrollableScrollPhysics(),
-                              child: Text(
-                                lineNumbersText,
-                                style: GoogleFonts.sourceCodePro(
-                                  color: AppColors.grey400,
-                                  fontSize: 13,
-                                  height: 1.5,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        // Editor TextField
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: TextField(
-                              controller: _textController,
-                              scrollController: _scrollController,
-                              focusNode: _focusNode,
-                              keyboardType: TextInputType.multiline,
-                              maxLines: null,
-                              expands: true,
-                              style: GoogleFonts.sourceCodePro(
-                                fontSize: 14,
-                                height: 1.5,
-                                color: isDark ? Colors.white : AppColors.grey900,
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                filled: false,
-                                contentPadding: EdgeInsets.symmetric(vertical: 12),
-                              ),
-                              onChanged: (text) {
-                                ref.read(editorProvider.notifier).updateContent(text);
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
+                  return _buildEditorView(isDark);
                 }
               } else {
                 return Row(
                   children: [
                     Expanded(
-                      child: Container(
-                        color: isDark ? const Color(0xFF0F1424) : Colors.white,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (_showLineNumbers)
-                              Container(
-                                width: 40,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF0B0E1B) : AppColors.grey50,
-                                  border: Border(
-                                    right: BorderSide(
-                                      color: isDark ? AppColors.grey800 : AppColors.grey200,
-                                    ),
-                                  ),
-                                ),
-                                child: SingleChildScrollView(
-                                  controller: _gutterScrollController,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  child: Text(
-                                    lineNumbersText,
-                                    style: GoogleFonts.sourceCodePro(
-                                      color: AppColors.grey400,
-                                      fontSize: 13,
-                                      height: 1.5,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: TextField(
-                                  controller: _textController,
-                                  scrollController: _scrollController,
-                                  focusNode: _focusNode,
-                                  keyboardType: TextInputType.multiline,
-                                  maxLines: null,
-                                  expands: true,
-                                  style: GoogleFonts.sourceCodePro(
-                                    fontSize: 14,
-                                    height: 1.5,
-                                    color: isDark ? Colors.white : AppColors.grey900,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    filled: false,
-                                    contentPadding: EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                  onChanged: (text) {
-                                    ref.read(editorProvider.notifier).updateContent(text);
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      child: _buildEditorView(isDark),
                     ),
                     if (editorState.isPreviewSplit) ...[
                       VerticalDivider(
@@ -614,20 +685,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                         color: isDark ? AppColors.grey800 : AppColors.grey300,
                       ),
                       Expanded(
-                        child: Container(
-                          color: isDark ? AppColors.darkScaffoldBg : AppColors.scaffoldBg,
-                          padding: const EdgeInsets.all(AppDimensions.paddingM),
-                          child: Markdown(
-                            data: editorState.currentContent,
-                            styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                              p: GoogleFonts.saira(fontSize: 14),
-                              h1: GoogleFonts.saira(fontSize: 22, fontWeight: FontWeight.bold),
-                              h2: GoogleFonts.saira(fontSize: 18, fontWeight: FontWeight.bold),
-                              h3: GoogleFonts.saira(fontSize: 16, fontWeight: FontWeight.bold),
-                              code: GoogleFonts.sourceCodePro(fontSize: 12, backgroundColor: isDark ? AppColors.grey800 : AppColors.grey100),
-                            ),
-                          ),
-                        ),
+                        child: _buildPreviewView(isDark, editorState),
                       ),
                     ],
                   ],
@@ -646,66 +704,116 @@ class _EditorPageState extends ConsumerState<EditorPage> {
   Widget _buildToolbar() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      height: 44,
       color: isDark ? AppColors.darkCardBg : AppColors.grey100,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
+      child: Wrap(
+        spacing: 0,
+        runSpacing: 0,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           // Editor Stack Undo/Redo
-          IconButton(
-            icon: const Icon(Icons.undo_rounded, size: 18),
+          _ToolbarButton(
+            icon: Icons.undo_rounded,
             onPressed: () => ref.read(editorProvider.notifier).undo(_textController),
             tooltip: 'Undo',
           ),
-          IconButton(
-            icon: const Icon(Icons.redo_rounded, size: 18),
+          _ToolbarButton(
+            icon: Icons.redo_rounded,
             onPressed: () => ref.read(editorProvider.notifier).redo(_textController),
             tooltip: 'Redo',
           ),
-          const VerticalDivider(),
+          
+          // _ToolbarDivider(),
           
           // Headings
-          IconButton(
-            icon: const Icon(Icons.title_rounded, size: 18),
+          _ToolbarButton(
+            icon: Icons.title_rounded,
             onPressed: () => _insertMarkdownTag('# '),
             tooltip: 'Heading 1',
           ),
-          IconButton(
-            icon: const Icon(Icons.format_bold_rounded, size: 18),
+          _ToolbarButton(
+            icon: Icons.format_bold_rounded,
             onPressed: () => _insertMarkdownTag('**', '**'),
             tooltip: 'Bold',
           ),
-          IconButton(
-            icon: const Icon(Icons.format_italic_rounded, size: 18),
+          _ToolbarButton(
+            icon: Icons.format_italic_rounded,
             onPressed: () => _insertMarkdownTag('*', '*'),
             tooltip: 'Italic',
           ),
-          IconButton(
-            icon: const Icon(Icons.format_quote_rounded, size: 18),
+          _ToolbarButton(
+            icon: Icons.format_quote_rounded,
             onPressed: () => _insertMarkdownTag('> '),
             tooltip: 'Quote',
           ),
-          IconButton(
-            icon: const Icon(Icons.code_rounded, size: 18),
+          _ToolbarButton(
+            icon: Icons.format_strikethrough_rounded,
+            onPressed: () => _insertMarkdownTag('~~', '~~'),
+            tooltip: 'Strikethrough',
+          ),
+          _ToolbarButton(
+            icon: Icons.code_rounded,
             onPressed: () => _insertMarkdownTag('```\n', '\n```'),
             tooltip: 'Code Block',
           ),
-          IconButton(
-            icon: const Icon(Icons.link_rounded, size: 18),
+          
+          // _ToolbarDivider(),
+
+          // Lists
+          _ToolbarButton(
+            icon: Icons.format_list_bulleted_rounded,
+            onPressed: () => _insertMarkdownTag('- '),
+            tooltip: 'Bullet List',
+          ),
+          _ToolbarButton(
+            icon: Icons.format_list_numbered_rounded,
+            onPressed: () => _insertMarkdownTag('1. '),
+            tooltip: 'Numbered List',
+          ),
+          _ToolbarButton(
+            icon: Icons.checklist_rounded,
+            onPressed: () => _insertMarkdownTag('- [ ] '),
+            tooltip: 'Task List',
+          ),
+          _ToolbarButton(
+            icon: Icons.horizontal_rule_rounded,
+            onPressed: () => _insertMarkdownTag('\n---\n'),
+            tooltip: 'Horizontal Rule',
+          ),
+          
+          // _ToolbarDivider(),
+
+          _ToolbarButton(
+            icon: Icons.link_rounded,
             onPressed: () => _insertMarkdownTag('[', '](https://)'),
             tooltip: 'Insert Link',
           ),
-          IconButton(
-            icon: const Icon(Icons.image_rounded, size: 18),
+          _ToolbarButton(
+            icon: Icons.image_rounded,
             onPressed: () => _insertMarkdownTag('![ImageDescription](', ')'),
             tooltip: 'Insert Image',
           ),
-          IconButton(
-            icon: const Icon(Icons.grid_on_rounded, size: 18),
-            onPressed: () => _insertMarkdownTag(
-              '| Header 1 | Header 2 |\n| -------- | -------- |\n| Cell 1   | Cell 2   |\n'
-            ),
+          _ToolbarButton(
+            icon: Icons.grid_on_rounded,
+            onPressed: _showTableDialog,
             tooltip: 'Insert Table',
+          ),
+
+          // _ToolbarDivider(),
+
+          // Zoom controls
+          _ToolbarButton(
+            icon: Icons.zoom_in_rounded,
+            onPressed: () => setState(() => _editorFontSize += 2),
+            tooltip: 'Zoom In',
+          ),
+          _ToolbarButton(
+            icon: Icons.zoom_out_rounded,
+            onPressed: () {
+              if (_editorFontSize > 8) {
+                setState(() => _editorFontSize -= 2);
+              }
+            },
+            tooltip: 'Zoom Out',
           ),
         ],
       ),
@@ -718,54 +826,58 @@ class _EditorPageState extends ConsumerState<EditorPage> {
 
     final searchField = TextField(
       controller: _searchController,
+      style: const TextStyle(fontSize: 13),
       decoration: const InputDecoration(
         hintText: 'Search text...',
-        prefixIcon: Icon(Icons.search_rounded, size: 16),
-        contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        prefixIcon: Icon(Icons.search_rounded, size: 14),
+        contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       ),
     );
 
     final replaceField = TextField(
       controller: _replaceController,
+      style: const TextStyle(fontSize: 13),
       decoration: const InputDecoration(
         hintText: 'Replace with...',
-        prefixIcon: Icon(Icons.find_replace_rounded, size: 16),
-        contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        prefixIcon: Icon(Icons.find_replace_rounded, size: 14),
+        contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       ),
     );
 
     final actionButton = OutlinedButton(
       onPressed: _replaceAll,
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(80, 36),
+        minimumSize: const Size(60, 32),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        textStyle: const TextStyle(fontSize: 12),
       ),
       child: const Text('Replace All'),
     );
 
     if (showRow) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         color: isDark ? const Color(0xFF141A2E) : AppColors.grey50,
         child: Row(
           children: [
             Expanded(child: searchField),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Expanded(child: replaceField),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             actionButton,
           ],
         ),
       );
     } else {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         color: isDark ? const Color(0xFF141A2E) : AppColors.grey50,
         child: Column(
           children: [
             searchField,
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             replaceField,
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             SizedBox(
               width: double.infinity,
               child: actionButton,
@@ -862,6 +974,43 @@ class _EditorPageState extends ConsumerState<EditorPage> {
   }
 }
 
+class _ToolbarButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String tooltip;
+
+  const _ToolbarButton({
+    required this.icon,
+    required this.onPressed,
+    required this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon, size: 18),
+      onPressed: onPressed,
+      tooltip: tooltip,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      splashRadius: 14,
+    );
+  }
+}
+
+class _ToolbarDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 18,
+      width: 1,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+    );
+  }
+}
+
 // ─── END DRAWER VERSION HISTORY COMPONENT ────────────────────────
 class _VersionHistoryDrawer extends ConsumerWidget {
   final int fileId;
@@ -908,7 +1057,7 @@ class _VersionHistoryDrawer extends ConsumerWidget {
                       final history = historyList[i];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                           child: const Icon(Icons.history_toggle_off_rounded, color: AppColors.primary),
                         ),
                         title: Text(
